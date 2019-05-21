@@ -180,7 +180,7 @@ fun Project.applyGroovyProjectConventions() {
 
     dependencies {
         compile(localGroovy())
-        testCompile("org.spockframework:spock-core:1.2-groovy-2.5") {
+        testCompile("org.spockframework:spock-core:1.3-groovy-2.5") {
             exclude(group = "org.codehaus.groovy")
         }
         testCompile("net.bytebuddy:byte-buddy:1.8.21")
