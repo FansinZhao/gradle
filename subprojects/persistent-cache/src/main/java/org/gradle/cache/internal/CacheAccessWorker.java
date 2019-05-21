@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -75,12 +74,7 @@ class CacheAccessWorker implements Runnable, Stoppable, AsyncCacheAccess {
 
     @Override
     public <T> T read(final Factory<T> task) {
-        FutureTask<T> futureTask = new FutureTask<T>(new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return task.create();
-            }
-        });
+        FutureTask<T> futureTask = new FutureTask<T>(() -> task.create());
         addToQueue(futureTask);
         try {
             return futureTask.get();
@@ -175,33 +169,30 @@ class CacheAccessWorker implements Runnable, Stoppable, AsyncCacheAccess {
     private void flushOperations(final Runnable updateOperation) {
         final List<FlushOperationsCommand> flushOperations = new ArrayList<FlushOperationsCommand>();
         try {
-            cacheAccess.useCache(new Runnable() {
-                @Override
-                public void run() {
-                    CountdownTimer timer = Time.startCountdownTimer(maximumLockingTimeMillis, TimeUnit.MILLISECONDS);
-                    if (updateOperation != null) {
-                        failureHandler.onExecute(updateOperation);
-                    }
-                    Runnable otherOperation;
-                    try {
-                        while ((otherOperation = workQueue.poll(batchWindowMillis, TimeUnit.MILLISECONDS)) != null) {
-                            failureHandler.onExecute(otherOperation);
-                            final Class<? extends Runnable> runnableClass = otherOperation.getClass();
-                            if (runnableClass == FlushOperationsCommand.class) {
-                                flushOperations.add((FlushOperationsCommand) otherOperation);
-                            }
-                            if (runnableClass == ShutdownOperationsCommand.class) {
-                                stopSeen = true;
-                            }
-                            if (runnableClass == ShutdownOperationsCommand.class
-                                    || runnableClass == FlushOperationsCommand.class
-                                    || timer.hasExpired()) {
-                                break;
-                            }
+            cacheAccess.useCache(() -> {
+                CountdownTimer timer = Time.startCountdownTimer(maximumLockingTimeMillis, TimeUnit.MILLISECONDS);
+                if (updateOperation != null) {
+                    failureHandler.onExecute(updateOperation);
+                }
+                Runnable otherOperation;
+                try {
+                    while ((otherOperation = workQueue.poll(batchWindowMillis, TimeUnit.MILLISECONDS)) != null) {
+                        failureHandler.onExecute(otherOperation);
+                        final Class<? extends Runnable> runnableClass = otherOperation.getClass();
+                        if (runnableClass == FlushOperationsCommand.class) {
+                            flushOperations.add((FlushOperationsCommand) otherOperation);
                         }
-                    } catch (InterruptedException e) {
-                        throw UncheckedException.throwAsUncheckedException(e);
+                        if (runnableClass == ShutdownOperationsCommand.class) {
+                            stopSeen = true;
+                        }
+                        if (runnableClass == ShutdownOperationsCommand.class
+                                || runnableClass == FlushOperationsCommand.class
+                                || timer.hasExpired()) {
+                            break;
+                        }
                     }
+                } catch (InterruptedException e) {
+                    throw UncheckedException.throwAsUncheckedException(e);
                 }
             });
         } finally {

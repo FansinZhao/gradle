@@ -31,9 +31,9 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Zip;
 import org.gradle.language.cpp.CppBinary;
 import org.gradle.language.cpp.CppLibrary;
+import org.gradle.language.cpp.CppPlatform;
 import org.gradle.language.cpp.CppSharedLibrary;
 import org.gradle.language.cpp.CppStaticLibrary;
-import org.gradle.language.cpp.CppPlatform;
 import org.gradle.language.cpp.internal.DefaultCppLibrary;
 import org.gradle.language.cpp.internal.DefaultCppPlatform;
 import org.gradle.language.internal.NativeComponentFactory;
@@ -128,9 +128,7 @@ public class CppLibraryPlugin implements Plugin<Project> {
             }
         }));
 
-        library.getBinaries().whenElementKnown(binary -> {
-            library.getMainPublication().addVariant(binary);
-        });
+        library.getBinaries().whenElementKnown(binary -> library.getMainPublication().addVariant(binary));
 
         project.afterEvaluate(p -> {
             // TODO: make build type configurable for components

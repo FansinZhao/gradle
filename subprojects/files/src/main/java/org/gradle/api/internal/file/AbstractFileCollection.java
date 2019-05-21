@@ -32,7 +32,6 @@ import org.gradle.api.tasks.TaskDependency;
 import org.gradle.util.CollectionUtils;
 import org.gradle.util.GUtil;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -190,12 +189,7 @@ public abstract class AbstractFileCollection implements FileCollectionInternal {
 
     @Override
     public FileCollection filter(final Spec<? super File> filterSpec) {
-        final Predicate<File> predicate = new Predicate<File>() {
-            @Override
-            public boolean apply(@Nullable File input) {
-                return filterSpec.isSatisfiedBy(input);
-            }
-        };
+        final Predicate<File> predicate = input -> filterSpec.isSatisfiedBy(input);
         return new AbstractFileCollection() {
             @Override
             public String getDisplayName() {

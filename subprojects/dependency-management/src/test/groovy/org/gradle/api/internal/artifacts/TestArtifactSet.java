@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableSet;
 import org.gradle.api.artifacts.ResolvedArtifact;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.attributes.AttributeContainer;
-import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ArtifactVisitor;
 import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvableArtifact;
 import org.gradle.api.internal.artifacts.ivyservice.resolveengine.artifact.ResolvedArtifactSet;
 import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
@@ -54,12 +53,9 @@ public class TestArtifactSet implements ResolvedArtifactSet {
 
     @Override
     public Completion startVisit(BuildOperationQueue<RunnableBuildOperation> actions, AsyncArtifactListener listener) {
-        return new Completion() {
-            @Override
-            public void visit(ArtifactVisitor visitor) {
-                for (final ResolvedArtifact artifact : artifacts) {
-                    visitor.visitArtifact(variantName, variant, new Adapter(artifact));
-                }
+        return visitor -> {
+            for (final ResolvedArtifact artifact : artifacts) {
+                visitor.visitArtifact(variantName, variant, new Adapter(artifact));
             }
         };
     }

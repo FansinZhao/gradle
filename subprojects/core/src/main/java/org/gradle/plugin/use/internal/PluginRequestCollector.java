@@ -17,7 +17,6 @@
 package org.gradle.plugin.use.internal;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.gradle.api.Transformer;
 import org.gradle.groovy.scripts.ScriptSource;
 import org.gradle.internal.exceptions.LocationAwareException;
 import org.gradle.plugin.management.internal.DefaultPluginRequest;
@@ -79,13 +78,10 @@ public class PluginRequestCollector {
     final List<DependencySpecImpl> specs = new LinkedList<DependencySpecImpl>();
 
     public PluginDependenciesSpec createSpec(final int lineNumber) {
-        return new PluginDependenciesSpec() {
-            @Override
-            public PluginDependencySpec id(String id) {
-                DependencySpecImpl spec = new DependencySpecImpl(id, lineNumber);
-                specs.add(spec);
-                return spec;
-            }
+        return id -> {
+            DependencySpecImpl spec = new DependencySpecImpl(id, lineNumber);
+            specs.add(spec);
+            return spec;
         };
     }
 
@@ -98,19 +94,9 @@ public class PluginRequestCollector {
 
     @VisibleForTesting
     List<PluginRequestInternal> listPluginRequests() {
-        List<PluginRequestInternal> pluginRequests = collect(specs, new Transformer<PluginRequestInternal, DependencySpecImpl>() {
-            @Override
-            public PluginRequestInternal transform(DependencySpecImpl original) {
-                return new DefaultPluginRequest(original.id, original.version, original.apply, original.lineNumber, scriptSource);
-            }
-        });
+        List<PluginRequestInternal> pluginRequests = collect(specs, original -> new DefaultPluginRequest(original.id, original.version, original.apply, original.lineNumber, scriptSource));
 
-        Map<PluginId, Collection<PluginRequestInternal>> groupedById = CollectionUtils.groupBy(pluginRequests, new Transformer<PluginId, PluginRequestInternal>() {
-            @Override
-            public PluginId transform(PluginRequestInternal pluginRequest) {
-                return pluginRequest.getId();
-            }
-        });
+        Map<PluginId, Collection<PluginRequestInternal>> groupedById = CollectionUtils.groupBy(pluginRequests, pluginRequest -> pluginRequest.getId());
 
         // Check for duplicates
         for (PluginId key : groupedById.keySet()) {

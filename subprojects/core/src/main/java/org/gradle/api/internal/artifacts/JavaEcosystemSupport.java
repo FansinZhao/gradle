@@ -18,18 +18,16 @@ package org.gradle.api.internal.artifacts;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
-import org.gradle.api.Action;
-import org.gradle.api.ActionConfiguration;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.attributes.AttributeCompatibilityRule;
 import org.gradle.api.attributes.AttributeDisambiguationRule;
 import org.gradle.api.attributes.AttributeMatchingStrategy;
 import org.gradle.api.attributes.AttributesSchema;
+import org.gradle.api.attributes.Bundling;
 import org.gradle.api.attributes.CompatibilityCheckDetails;
 import org.gradle.api.attributes.HasAttributes;
 import org.gradle.api.attributes.MultipleCandidatesDetails;
 import org.gradle.api.attributes.Usage;
-import org.gradle.api.attributes.Bundling;
 import org.gradle.api.attributes.java.TargetJvmVersion;
 import org.gradle.api.internal.ReusableAction;
 import org.gradle.api.internal.attributes.AttributeContainerInternal;
@@ -69,17 +67,14 @@ public abstract class JavaEcosystemSupport {
     private static void configureUsage(AttributesSchema attributesSchema, final ObjectFactory objectFactory) {
         AttributeMatchingStrategy<Usage> usageSchema = attributesSchema.attribute(Usage.USAGE_ATTRIBUTE);
         usageSchema.getCompatibilityRules().add(UsageCompatibilityRules.class);
-        usageSchema.getDisambiguationRules().add(UsageDisambiguationRules.class, new Action<ActionConfiguration>() {
-            @Override
-            public void execute(ActionConfiguration actionConfiguration) {
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API_JARS));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API_CLASSES));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_JARS));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_CLASSES));
-                actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_RESOURCES));
-            }
+        usageSchema.getDisambiguationRules().add(UsageDisambiguationRules.class, actionConfiguration -> {
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API_JARS));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_API_CLASSES));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_JARS));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_CLASSES));
+            actionConfiguration.params(objectFactory.named(Usage.class, Usage.JAVA_RUNTIME_RESOURCES));
         });
     }
 

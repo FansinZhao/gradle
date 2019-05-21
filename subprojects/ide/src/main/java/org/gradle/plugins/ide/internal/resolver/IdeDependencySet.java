@@ -21,9 +21,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import org.gradle.api.Action;
 import org.gradle.api.artifacts.ArtifactCollection;
-import org.gradle.api.artifacts.ArtifactView;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
@@ -126,12 +124,9 @@ public class IdeDependencySet {
         }
 
         private ArtifactCollection getResolvedArtifacts(Configuration configuration, final IdeDependencyVisitor visitor) {
-            return configuration.getIncoming().artifactView(new Action<ArtifactView.ViewConfiguration>() {
-                @Override
-                public void execute(ArtifactView.ViewConfiguration viewConfiguration) {
-                    viewConfiguration.lenient(true);
-                    viewConfiguration.componentFilter(getComponentFilter(visitor));
-                }
+            return configuration.getIncoming().artifactView(viewConfiguration -> {
+                viewConfiguration.lenient(true);
+                viewConfiguration.componentFilter(getComponentFilter(visitor));
             }).getArtifacts();
         }
 
@@ -226,11 +221,6 @@ public class IdeDependencySet {
         }
     }
 
-    static final Spec<ComponentIdentifier> NOT_A_MODULE = new Spec<ComponentIdentifier>() {
-        @Override
-        public boolean isSatisfiedBy(ComponentIdentifier id) {
-            return !(id instanceof ModuleComponentIdentifier);
-        }
-    };
+    static final Spec<ComponentIdentifier> NOT_A_MODULE = id -> !(id instanceof ModuleComponentIdentifier);
 
 }

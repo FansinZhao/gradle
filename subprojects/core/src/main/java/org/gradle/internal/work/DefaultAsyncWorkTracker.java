@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.gradle.api.specs.Spec;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.internal.operations.BuildOperationRef;
 import org.gradle.internal.resources.ProjectLeaseRegistry;
@@ -68,21 +67,11 @@ public class DefaultAsyncWorkTracker implements AsyncWorkTracker {
 
         try {
             if (workItems.size() > 0) {
-                boolean workInProgress = CollectionUtils.any(workItems, new Spec<AsyncWorkCompletion>() {
-                    @Override
-                    public boolean isSatisfiedBy(AsyncWorkCompletion workCompletion) {
-                        return !workCompletion.isComplete();
-                    }
-                });
+                boolean workInProgress = CollectionUtils.any(workItems, workCompletion -> !workCompletion.isComplete());
                 // only release the project lock if we have to wait for items to finish
                 if (releaseLocks && workInProgress) {
                     projectLeaseRegistry.withoutProjectLock(
-                        new Runnable() {
-                        @Override
-                        public void run() {
-                            waitForItemsAndGatherFailures(workItems);
-                        }
-                    });
+                        () -> waitForItemsAndGatherFailures(workItems));
                 } else {
                     waitForItemsAndGatherFailures(workItems);
                 }

@@ -16,16 +16,12 @@
 
 package org.gradle.integtests.tooling.r44;
 
-import org.gradle.api.Action;
 import org.gradle.tooling.BuildAction;
 import org.gradle.tooling.BuildController;
 
 public class InvalidModel2Action implements BuildAction<CustomModel2> {
     @Override
     public CustomModel2 execute(BuildController controller) {
-        return controller.getModel(CustomModel2.class, CustomParameter.class, new Action<CustomParameter>() {
-            @Override
-            public void execute(CustomParameter customParameter) {}
-        });
+        return controller.getModel(CustomModel2.class, CustomParameter.class, customParameter -> {});
     }
 }

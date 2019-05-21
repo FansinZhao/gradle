@@ -16,20 +16,16 @@
 
 package org.gradle.api.internal.tasks.compile;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import groovy.lang.Binding;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyShell;
 import groovy.lang.GroovySystem;
-import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.codehaus.groovy.control.messages.SimpleMessage;
 import org.codehaus.groovy.tools.javac.JavaAwareCompilationUnit;
-import org.codehaus.groovy.tools.javac.JavaCompiler;
-import org.codehaus.groovy.tools.javac.JavaCompilerFactory;
 import org.gradle.api.GradleException;
 import org.gradle.api.internal.classloading.GroovySystemLoader;
 import org.gradle.api.internal.classloading.GroovySystemLoaderFactory;
@@ -49,7 +45,6 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.gradle.internal.FileUtils.hasExtension;
@@ -137,41 +132,28 @@ public class ApiGroovyCompiler implements org.gradle.language.base.internal.comp
         Arrays.sort(sortedSourceFiles);
         unit.addSources(sortedSourceFiles);
 
-        unit.setCompilerFactory(new JavaCompilerFactory() {
-            @Override
-            public JavaCompiler createCompiler(final CompilerConfiguration config) {
-                return new JavaCompiler() {
-                    @Override
-                    public void compile(List<String> files, CompilationUnit cu) {
-                        if (shouldProcessAnnotations) {
-                            // In order for the Groovy stubs to have annotation processors invoked against them, they must be compiled as source.
-                            // Classes compiled as a result of being on the -sourcepath do not have the annotation processor run against them
-                            spec.setSourceFiles(Iterables.concat(spec.getSourceFiles(), ImmutableFileCollection.of(stubDir).getAsFileTree()));
-                        } else {
-                            // When annotation processing isn't required, it's better to add the Groovy stubs as part of the source path.
-                            // This allows compilations to complete faster, because only the Groovy stubs that are needed by the java source are compiled.
-                            ImmutableList.Builder<File> sourcepathBuilder = ImmutableList.builder();
-                            sourcepathBuilder.add(stubDir);
-                            if (spec.getCompileOptions().getSourcepath() != null) {
-                                sourcepathBuilder.addAll(spec.getCompileOptions().getSourcepath());
-                            }
-                            spec.getCompileOptions().setSourcepath(sourcepathBuilder.build());
-                        }
+        unit.setCompilerFactory(config -> (files, cu) -> {
+            if (shouldProcessAnnotations) {
+                // In order for the Groovy stubs to have annotation processors invoked against them, they must be compiled as source.
+                // Classes compiled as a result of being on the -sourcepath do not have the annotation processor run against them
+                spec.setSourceFiles(Iterables.concat(spec.getSourceFiles(), ImmutableFileCollection.of(stubDir).getAsFileTree()));
+            } else {
+                // When annotation processing isn't required, it's better to add the Groovy stubs as part of the source path.
+                // This allows compilations to complete faster, because only the Groovy stubs that are needed by the java source are compiled.
+                ImmutableList.Builder<File> sourcepathBuilder = ImmutableList.builder();
+                sourcepathBuilder.add(stubDir);
+                if (spec.getCompileOptions().getSourcepath() != null) {
+                    sourcepathBuilder.addAll(spec.getCompileOptions().getSourcepath());
+                }
+                spec.getCompileOptions().setSourcepath(sourcepathBuilder.build());
+            }
 
-                        spec.setSourceFiles(Iterables.filter(spec.getSourceFiles(), new Predicate<File>() {
-                            @Override
-                            public boolean apply(File file) {
-                                return hasExtension(file, ".java");
-                            }
-                        }));
+            spec.setSourceFiles(Iterables.filter(spec.getSourceFiles(), file -> hasExtension(file, ".java")));
 
-                        try {
-                            javaCompiler.execute(spec);
-                        } catch (CompilationFailedException e) {
-                            cu.getErrorCollector().addFatalError(new SimpleMessage(e.getMessage(), cu));
-                        }
-                    }
-                };
+            try {
+                javaCompiler.execute(spec);
+            } catch (CompilationFailedException e) {
+                cu.getErrorCollector().addFatalError(new SimpleMessage(e.getMessage(), cu));
             }
         });
 

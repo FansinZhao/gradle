@@ -75,7 +75,6 @@ import org.gradle.api.publish.maven.internal.dependencies.DefaultMavenDependency
 import org.gradle.api.publish.maven.internal.dependencies.MavenDependencyInternal;
 import org.gradle.api.publish.maven.internal.publisher.MavenNormalizedPublication;
 import org.gradle.api.publish.maven.internal.publisher.MutableMavenProjectIdentity;
-import org.gradle.api.specs.Spec;
 import org.gradle.internal.Cast;
 import org.gradle.internal.Describables;
 import org.gradle.internal.DisplayName;
@@ -566,21 +565,13 @@ public class DefaultMavenPublication implements MavenPublicationInternal {
     @Override
     public MavenNormalizedPublication asNormalisedPublication() {
         populateFromComponent();
-        DomainObjectSet<MavenArtifact> existingDerivedArtifacts = this.derivedArtifacts.matching(new Spec<MavenArtifact>() {
-            @Override
-            public boolean isSatisfiedBy(MavenArtifact artifact) {
-                return artifact.getFile().exists();
+        DomainObjectSet<MavenArtifact> existingDerivedArtifacts = this.derivedArtifacts.matching(artifact -> artifact.getFile().exists());
+        Set<MavenArtifact> artifactsToBePublished = CompositeDomainObjectSet.create(MavenArtifact.class, mainArtifacts, metadataArtifacts, existingDerivedArtifacts).matching(element -> {
+            if (moduleMetadataArtifact == element) {
+                // We temporarily want to allow skipping the publication of Gradle module metadata
+                return moduleMetadataArtifact.isEnabled();
             }
-        });
-        Set<MavenArtifact> artifactsToBePublished = CompositeDomainObjectSet.create(MavenArtifact.class, mainArtifacts, metadataArtifacts, existingDerivedArtifacts).matching(new Spec<MavenArtifact>() {
-            @Override
-            public boolean isSatisfiedBy(MavenArtifact element) {
-                if (moduleMetadataArtifact == element) {
-                    // We temporarily want to allow skipping the publication of Gradle module metadata
-                    return moduleMetadataArtifact.isEnabled();
-                }
-                return true;
-            }
+            return true;
         });
         return new MavenNormalizedPublication(name, pom.getPackaging(), getPomArtifact(), projectIdentity, artifactsToBePublished, determineMainArtifact());
     }
@@ -622,12 +613,7 @@ public class DefaultMavenPublication implements MavenPublicationInternal {
 
     private Set<MavenArtifact> getUnclassifiedArtifactsWithExtension() {
         populateFromComponent();
-        return CollectionUtils.filter(mainArtifacts, new Spec<MavenArtifact>() {
-            @Override
-            public boolean isSatisfiedBy(MavenArtifact mavenArtifact) {
-                return hasNoClassifier(mavenArtifact) && hasExtension(mavenArtifact);
-            }
-        });
+        return CollectionUtils.filter(mainArtifacts, mavenArtifact -> hasNoClassifier(mavenArtifact) && hasExtension(mavenArtifact));
     }
 
     boolean hasNoClassifier(MavenArtifact element) {

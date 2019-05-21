@@ -18,7 +18,6 @@ package org.gradle.testfixtures.internal;
 import org.gradle.api.Transformer;
 import org.gradle.cache.PersistentIndexedCache;
 import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.Factory;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.serialize.InputStreamBackedDecoder;
 import org.gradle.internal.serialize.OutputStreamBackedEncoder;
@@ -59,14 +58,11 @@ public class InMemoryIndexedCache<K, V> implements PersistentIndexedCache<K, V> 
 
     @Override
     public V get(final K key, final Transformer<? extends V, ? super K> producer) {
-        return producerGuard.guardByKey(key, new Factory<V>() {
-            @Override
-            public V create() {
-                if (!entries.containsKey(key)) {
-                    put(key, producer.transform(key));
-                }
-                return get(key);
+        return producerGuard.guardByKey(key, () -> {
+            if (!entries.containsKey(key)) {
+                put(key, producer.transform(key));
             }
+            return get(key);
         });
     }
 

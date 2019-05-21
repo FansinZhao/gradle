@@ -25,7 +25,6 @@ import org.apache.tools.ant.MagicNames;
 import org.apache.tools.ant.ProjectHelper;
 import org.apache.tools.ant.PropertyHelper;
 import org.apache.tools.ant.Target;
-import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -38,8 +37,6 @@ import org.gradle.api.tasks.TaskDependency;
 import org.gradle.api.tasks.ant.AntTarget;
 import org.gradle.internal.Transformers;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -77,12 +74,7 @@ public class DefaultAntBuilder extends BasicAntBuilder implements GroovyObject {
     @Override
     public Map<String, Object> getProperties() {
         ObservableMap map = new ObservableMap(getProject().getProperties());
-        map.addPropertyChangeListener(new PropertyChangeListener() {
-            @Override
-            public void propertyChange(PropertyChangeEvent event) {
-                doSetProperty(event.getPropertyName(), event.getNewValue());
-            }
-        });
+        map.addPropertyChangeListener(event -> doSetProperty(event.getPropertyName(), event.getNewValue()));
 
         @SuppressWarnings("unchecked") Map<String, Object> castMap = (Map<String, Object>) map;
         return castMap;
@@ -91,12 +83,7 @@ public class DefaultAntBuilder extends BasicAntBuilder implements GroovyObject {
     @Override
     public Map<String, Object> getReferences() {
         ObservableMap map = new ObservableMap(getProject().getReferences());
-        map.addPropertyChangeListener(new PropertyChangeListener() {
-            @Override
-            public void propertyChange(PropertyChangeEvent event) {
-                getProject().addReference(event.getPropertyName(), event.getNewValue());
-            }
-        });
+        map.addPropertyChangeListener(event -> getProject().addReference(event.getPropertyName(), event.getNewValue()));
 
         @SuppressWarnings("unchecked") Map<String, Object> castMap = (Map<String, Object>) map;
         return castMap;
@@ -163,12 +150,9 @@ public class DefaultAntBuilder extends BasicAntBuilder implements GroovyObject {
         for (final String dependency : dependencies) {
             if (previous != null) {
                 final String finalPrevious = previous;
-                tasks.all(new Action<Task>() {
-                    @Override
-                    public void execute(Task task) {
-                        if (task.getName().equals(dependency)) {
-                            task.shouldRunAfter(finalPrevious);
-                        }
+                tasks.all(task -> {
+                    if (task.getName().equals(dependency)) {
+                        task.shouldRunAfter(finalPrevious);
                     }
                 });
             }
